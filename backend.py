@@ -6,8 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_ollama import OllamaEmbeddings, OllamaLLM
+from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
@@ -34,7 +35,8 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-embeddings = OllamaEmbeddings(model="nomic-embed-text")
+# Yerel Ollama Embeddings yerine HuggingFace kullanıyoruz
+embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
@@ -88,15 +90,16 @@ def create_spoiler_filter(kullanici_seviyesi):
         return filtrelenmis_docs
     return spoiler_filtresi
 
-# Prompt ve LLM
-llm = OllamaLLM(model="llama3.2")
+# Google Gemini Modeli (Render panelindeki Environment Variable'dan GOOGLE_API_KEY'i otomatik okur)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+
 prompt = ChatPromptTemplate.from_template("""
 Sen Re:Zero evreninde geçen olayları çok iyi bilen, spoiler koruma protokollerine sıkı sıkıya bağlı, samimi ama profesyonel bir dijital asistansın. Görevin, kullanıcının hikayedeki mevcut ilerleme durumunu ve sana sunulan bağlamı (context) esas alarak soruları yanıtlamaktır.
 
 TEMEL KURALLAR VE KISITLAMALAR:
 1. **Kesin Bağlam Sadakati:** Cevaplarını SADECE ve SADECE sana sağlanan bağlamdaki metinlere dayandır. Bağlam dışından asla bilgi getirme.
 2. **Asla Spoiler Verme:** Kullanıcının seçtiği sezondan/arc'tan sonraki olaylara, karakter kaderlerine (ölüm, diriliş vb.) veya dönüm noktalarına asla değinme.
-3. **Uydurma ve Halüsinasyon Yasaktır:** Eğer sorulan sorunun yanıtı bağlamda net olarak yer almıyorsa, kendi kendine hikaye yazma veya tahmin yürütme.
+3. **Uydurma dan Halüsinasyon Yasaktır:** Eğer sorulan sorunun yanıtı bağlamda net olarak yer almıyorsa, kendi kendine hikaye yazma veya tahmin yürütme.
 4. **Standart Hata Mesajı:** Bağlamda bulunmayan veya erişimin kısıtlı olduğu bir bilgi sorulduğunda, yorum yapmadan kelimesi kelimesine şurayı yaz: "Bu bilgi elimdeki kaynaklarda bulunmuyor."
 5. **Üslup ve Dil:** Yanıtların her zaman akıcı, gramer açısından kusursuz, doğal bir Türkçe ile olsun; robotik, bozuk veya İngilizce karışık kalıplar kesinlikle kullanma.
 
