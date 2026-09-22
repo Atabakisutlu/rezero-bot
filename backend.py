@@ -6,11 +6,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import GoogleGenerativeAIEmbeddings, ChatGoogleGenerativeAI
+from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_core.embeddings import Embeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+import google.generativeai as genai
 
 app = FastAPI()
 
@@ -22,6 +24,31 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Google GenAI yapılandırması
+GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
+genai.configure(api_key=GOOGLE_API_KEY)
+
+# Özel ve hatasız Google Embedding Sınıfı (Versiyon takılmasına son)
+class SafeGoogleEmbeddings(Embeddings):
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        embeddings = []
+        for text in texts:
+            response = genai.embed_content(
+                model="models/text-embedding-004",
+                content=text,
+                task_type="retrieval_document"
+            )
+            embeddings.append(response['embedding'])
+        return embeddings
+
+    def embed_query(self, text: str) -> list[float]:
+        response = genai.embed_content(
+            model="models/text-embedding-004",
+            content=text,
+            task_type="retrieval_query"
+        )
+        return response['embedding']
+
 loader = DirectoryLoader('./veri_havuzu/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'})
 docs = loader.load()
 
@@ -32,8 +59,7 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-# Model adı verilmediğinde kütüphane otomatik olarak en güncel çalışan sürümü seçer
-embeddings = GoogleGenerativeAIEmbeddings(google_api_key=os.environ.get("GOOGLE_API_KEY"))
+embeddings = SafeGoogleEmbeddings()
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
@@ -86,7 +112,7 @@ def create_spoiler_filter(kullanici_seviyesi):
         return filtrelenmis_docs
     return spoiler_filtresi
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2, google_api_key=os.environ.get("GOOGLE_API_KEY"))
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2, google_api_key=GOOGLE_API_KEY)
 
 prompt = ChatPromptTemplate.from_template("""
 Sen Re:Zero evreninde geçen olayları çok iyi bilen, spoiler koruma protokollerine sıkı sıkıya bağlı, samimi ama profesyonel bir dijital asistansın. Görevin, kullanıcının hikayedeki mevcut ilerleme durumunu ve sana sunulan bağlamı (context) esas alarak soruları yanıtlamaktır.
