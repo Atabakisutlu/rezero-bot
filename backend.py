@@ -32,8 +32,8 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-# Doğru ve güncel Google Embedding modeli
-embeddings = GoogleGenerativeAIEmbeddings(model="embedding-001")
+# En kararlı Google Embedding tanımlaması
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.environ.get("GOOGLE_API_KEY"))
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
@@ -86,7 +86,7 @@ def create_spoiler_filter(kullanici_seviyesi):
         return filtrelenmis_docs
     return spoiler_filtresi
 
-llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2)
+llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0.2, google_api_key=os.environ.get("GOOGLE_API_KEY"))
 
 prompt = ChatPromptTemplate.from_template("""
 Sen Re:Zero evreninde geçen olayları çok iyi bilen, spoiler koruma protokollerine sıkı sıkıya bağlı, samimi ama profesyonel bir dijital asistansın. Görevin, kullanıcının hikayedeki mevcut ilerleme durumunu ve sana sunulan bağlamı (context) esas alarak soruları yanıtlamaktır.
