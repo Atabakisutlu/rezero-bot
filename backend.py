@@ -6,13 +6,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from langchain_community.document_loaders import DirectoryLoader, TextLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.embeddings import Embeddings
+from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_chroma import Chroma
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-import google.generativeai as genai
 
 app = FastAPI()
 
@@ -24,31 +22,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Google GenAI yapılandırması
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
 
-# Özel ve hatasız Google Embedding Sınıfı (Versiyon takılmasına son)
-class SafeGoogleEmbeddings(Embeddings):
-    def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        embeddings = []
-        for text in texts:
-            response = genai.embed_content(
-                model="models/text-embedding-004",
-                content=text,
-                task_type="retrieval_document"
-            )
-            embeddings.append(response['embedding'])
-        return embeddings
-
-    def embed_query(self, text: str) -> list[float]:
-        response = genai.embed_content(
-            model="models/text-embedding-004",
-            content=text,
-            task_type="retrieval_query"
-        )
-        return response['embedding']
-
+# Veri havuzunu yükle
 loader = DirectoryLoader('./veri_havuzu/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'})
 docs = loader.load()
 
@@ -59,7 +35,8 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-embeddings = SafeGoogleEmbeddings()
+# Doğrudan standart langchain-google-genai embeddings
+embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=GOOGLE_API_KEY)
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
