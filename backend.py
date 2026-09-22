@@ -33,7 +33,7 @@ if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
 # Hafıza tüketmeyen Google Embeddings kullanıyoruz
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001")
+embeddings = GoogleGenerativeAIEmbeddings(model="models/text-embedding-004")
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
