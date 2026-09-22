@@ -32,8 +32,8 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-# En kararlı Google Embedding tanımlaması
-embeddings = GoogleGenerativeAIEmbeddings(model="models/embedding-001", google_api_key=os.environ.get("GOOGLE_API_KEY"))
+# Model adı verilmediğinde kütüphane otomatik olarak en güncel çalışan sürümü seçer
+embeddings = GoogleGenerativeAIEmbeddings(google_api_key=os.environ.get("GOOGLE_API_KEY"))
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
