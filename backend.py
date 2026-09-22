@@ -32,7 +32,7 @@ persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-# Hafıza tüketmeyen Google Embeddings kullanıyoruz
+# Doğru ve güncel Google Embedding modeli
 embeddings = GoogleGenerativeAIEmbeddings(model="text-embedding-004")
 vectorstore = Chroma.from_documents(
     documents=splits, 
