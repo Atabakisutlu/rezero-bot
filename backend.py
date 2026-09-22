@@ -33,7 +33,7 @@ if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
 # Doğru ve güncel Google Embedding modeli
-embeddings = GoogleGenerativeAIEmbeddings(model="text-embedding-004")
+embeddings = GoogleGenerativeAIEmbeddings(model="embedding-001")
 vectorstore = Chroma.from_documents(
     documents=splits, 
     embedding=embeddings, 
