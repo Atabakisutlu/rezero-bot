@@ -27,13 +27,13 @@ app.add_middleware(
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
-# Tamamen hatasız ve doğrudan Google API kullanan Embedding Sınıfı
+# Güncel ve hatasız Google Embedding Sınıfı
 class DirectGoogleEmbeddings(Embeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         embeddings = []
         for text in texts:
             response = genai.embed_content(
-                model="models/embedding-001",
+                model="models/text-embedding-004",
                 content=text,
                 task_type="retrieval_document"
             )
@@ -42,7 +42,7 @@ class DirectGoogleEmbeddings(Embeddings):
 
     def embed_query(self, text: str) -> list[float]:
         response = genai.embed_content(
-            model="models/embedding-001",
+            model="models/text-embedding-004",
             content=text,
             task_type="retrieval_query"
         )
