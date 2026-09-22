@@ -13,6 +13,7 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
+from langchain_core.documents import Document
 
 app = FastAPI()
 
@@ -25,9 +26,9 @@ app.add_middleware(
 )
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
-genai.configure(api_key=GOOGLE_API_KEY)
+if GOOGLE_API_KEY:
+    genai.configure(api_key=GOOGLE_API_KEY)
 
-# Güncel ve hatasız Google Embedding Sınıfı
 class DirectGoogleEmbeddings(Embeddings):
     def embed_documents(self, texts: list[str]) -> list[list[float]]:
         embeddings = []
@@ -48,16 +49,19 @@ class DirectGoogleEmbeddings(Embeddings):
         )
         return response['embedding']
 
-# Veri havuzunu yükle
-loader = DirectoryLoader('./veri_havuzu/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'})
-docs = loader.load()
-
-text_splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=100)
-splits = text_splitter.split_documents(docs)
-
+# Güvenli Veri Yükleyici (Klasör bulunamazsa patlamaz)
 persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
+
+try:
+    loader = DirectoryLoader('./veri_havuzu/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'})
+    docs = loader.load()
+except Exception as e:
+    docs = [Document(page_content="Re:Zero veri havuzu yüklenemedi.", metadata={"source": "safe_fallback"})]
+
+text_splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=100)
+splits = text_splitter.split_documents(docs)
 
 embeddings = DirectGoogleEmbeddings()
 vectorstore = Chroma.from_documents(
