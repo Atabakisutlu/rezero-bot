@@ -1,6 +1,7 @@
 import os
 import shutil
 import re
+import time
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -46,11 +47,24 @@ splits = text_splitter.split_documents(docs)
 
 # Google'ın güncel ve sorunsuz çalışan embedding modeli
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=GOOGLE_API_KEY)
-vectorstore = Chroma.from_documents(
-    documents=splits, 
-    embedding=embeddings, 
-    persist_directory=persist_directory
-)
+
+print(f"Toplam {len(splits)} parça işlenecek. API limitine takılmamak için yavaş yavaş yükleniyor...")
+
+# Önce boş bir vektör veritabanı bağlantısı oluşturuyoruz
+vectorstore = Chroma(embedding_function=embeddings, persist_directory=persist_directory)
+
+# Parçaları 20'şerli güvenli gruplar halinde işliyoruz (Google sınırı dakikada 100)
+batch_size = 20
+for i in range(0, len(splits), batch_size):
+    batch = splits[i:i + batch_size]
+    print(f"Vektörleştiriliyor: {i} - {i + len(batch)} / {len(splits)}")
+    
+    # Sadece bu küçük grubu veritabanına ekle
+    vectorstore.add_documents(documents=batch)
+    
+    # Limitlere çarpmamak için her gruptan sonra 15 saniye bekle
+    time.sleep(15)
+
 retriever = vectorstore.as_retriever(search_kwargs={"k": 4})
 
 def create_spoiler_filter(kullanici_seviyesi):
