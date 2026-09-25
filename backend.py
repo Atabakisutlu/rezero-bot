@@ -25,11 +25,16 @@ app.add_middleware(
 
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY")
 
+# Render uyanırken veya tarayıcıdan girildiğinde 404 hatasını önleyen karşılama rotası
+@app.get("/")
+def read_root():
+    return {"message": "Re:Zero Bot API is running!"}
+
 persist_directory = "./chroma_db"
 if os.path.exists(persist_directory):
     shutil.rmtree(persist_directory)
 
-# Veri havuzunun eksik olma ihtimaline karşı çökme kilidi
+# Veri havuzunun okunamama ihtimaline karşı çökme kilidi
 try:
     loader = DirectoryLoader('./veri_havuzu/', glob="**/*.txt", loader_cls=TextLoader, loader_kwargs={'encoding': 'utf-8'})
     docs = loader.load()
@@ -39,7 +44,7 @@ except Exception as e:
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=700, chunk_overlap=100)
 splits = text_splitter.split_documents(docs)
 
-# İŞTE ÇÖZÜM: Google'ın 2026 itibarıyla çalışan tek güncel embedding modeli!
+# Google'ın güncel ve sorunsuz çalışan embedding modeli
 embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=GOOGLE_API_KEY)
 vectorstore = Chroma.from_documents(
     documents=splits, 
